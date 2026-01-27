@@ -1,0 +1,12 @@
+name: yolov11-vehicle-speed-tracker
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python>=3.8
+  - pip
+  - pip:
+    - opencv-python
+    - gdown
+    - ultralytics
+    - supervision

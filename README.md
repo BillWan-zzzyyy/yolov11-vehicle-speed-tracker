@@ -73,6 +73,23 @@ MODEL_PATH = "yolo11s.pt"  # Or "yolo11m.pt", "yolo11n.pt"
 
 Try each and observe the trade-off between FPS and accuracy in your environment.
 
+## Improvement
+```
+# 针对其他视频， 需要先进行比例转换从而计算速度
+
+# 启动对image_point（图片点 跟踪区域）的标注
+python annotate.py
+# 按顺序点击4个点：1. 左上角 2. 右上角 3. 右下角 4. 左下角 s保存 q退出
+
+# 复制image_point到constant.py中
+
+# 启动world_point标注 （比例转换）
+python calibrate.py
+
+# 按 w 切换到宽度模式,选择水平方向的参考物体（如车道宽度; 按 h 切换到高度模式.选择垂直方向的参考物体（如道路标线间隔9.14）
+# 将 WORLD_POINTS复制到constant.py中
+```
+
 ## Results
 
 ![alt_text](https://github.com/krishnapriya-nynaru/yolov11-vehicle-speed-tracker/blob/main/vehicle_speed_estimator/results/output.gif?raw=true)
