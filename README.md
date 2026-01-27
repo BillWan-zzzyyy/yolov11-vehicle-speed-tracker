@@ -75,7 +75,7 @@ Try each and observe the trade-off between FPS and accuracy in your environment.
 
 ## Improvement
 针对其他视频， 需要先进行比例转换从而计算速度
-```
+```bash
 # 启动对image_point（图片点 跟踪区域）的标注
 python annotate.py
 
@@ -84,7 +84,7 @@ python annotate.py
 ```
 
 启动world_point标注 （比例转换）
-```
+```bash
 python calibrate.py
 
 # 按 w 切换到宽度模式,选择水平方向的参考物体（如车道宽度; 按 h 切换到高度模式.选择垂直方向的参考物体（如道路标线间隔9.14）
