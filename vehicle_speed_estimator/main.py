@@ -1,6 +1,7 @@
 import cv2 as cv
 from ultralytics import YOLO
 import supervision as sv
+import time  # 添加这个导入
 
 from utils.downloader import download_video_if_needed
 from utils.constants import IMAGE_POINTS, WORLD_POINTS
@@ -17,6 +18,9 @@ def main():
     FPS = video_info.fps
     WIDTH = round(video_info.width / 32) * 32
     HEIGHT = round(video_info.height / 32) * 32
+    
+    # 计算每帧应该等待的时间（毫秒）
+    frame_delay = int(1000 / FPS) if FPS > 0 else 33  # 默认30fps
 
     cap = cv.VideoCapture(source_video)
 
@@ -29,6 +33,8 @@ def main():
     model = YOLO(MODEL_PATH)
 
     while True:
+        start_time = time.time()  # 记录开始时间
+        
         ret, frame = cap.read()
         if not ret:
             break
@@ -54,15 +60,20 @@ def main():
             speed = speedometer.get_current_speed(trace_id)
             labels.append(f"#Vehicle Id:{trace_id} Speed:{speed} km/h")
 
-        frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-        frame = cv.cvtColor(frame_gray, cv.COLOR_GRAY2BGR)
+        # frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        # frame = cv.cvtColor(frame_gray, cv.COLOR_GRAY2BGR)
 
         frame = annotators["bbox"].annotate(frame, detections)
         frame = annotators["trace"].annotate(frame, detections)
         frame = annotators["label"].annotate(frame, detections, labels=labels)
 
         cv.imshow("Vehicle Speed Estimation - YOLOv11", frame)
-        if cv.waitKey(1) & 0xFF == ord("q"):
+        
+        # 计算处理时间，动态调整等待时间
+        processing_time = (time.time() - start_time) * 1000  # 转换为毫秒
+        wait_time = max(1, int(frame_delay - processing_time))
+        
+        if cv.waitKey(wait_time) & 0xFF == ord("q"):
             break
 
     cap.release()
