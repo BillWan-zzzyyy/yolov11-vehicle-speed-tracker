@@ -32,6 +32,16 @@ def main():
     speedometer = Speedometer(mapper, FPS, MPS_TO_KPH)
     model = YOLO(MODEL_PATH)
 
+    print("="*60)
+    print("车辆速度检测系统已启动")
+    print("="*60)
+    print("退出方式:")
+    print("  - 在视频窗口按 'q' 键退出")
+    print("  - 在视频窗口按 'ESC' 键退出")
+    print("  - 关闭视频窗口退出")
+    print("  - 视频播放完毕自动退出")
+    print("="*60)
+
     while True:
         start_time = time.time()  # 记录开始时间
         
@@ -73,11 +83,20 @@ def main():
         processing_time = (time.time() - start_time) * 1000  # 转换为毫秒
         wait_time = max(1, int(frame_delay - processing_time))
         
-        if cv.waitKey(wait_time) & 0xFF == ord("q"):
+        # 支持多种退出方式
+        key = cv.waitKey(wait_time) & 0xFF
+        if key == ord("q") or key == 27:  # 'q' 键或 ESC 键
+            print("\n用户主动退出程序")
+            break
+        
+        # 检查窗口是否被关闭
+        if cv.getWindowProperty("Vehicle Speed Estimation - YOLOv11", cv.WND_PROP_VISIBLE) < 1:
+            print("\n视频窗口已关闭，退出程序")
             break
 
     cap.release()
     cv.destroyAllWindows()
+    print("程序已正常退出")
 
 if __name__ == "__main__":
     main()
