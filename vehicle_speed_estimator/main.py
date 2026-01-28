@@ -10,6 +10,7 @@ from config.settings import *
 from modules.mapping import Cam2WorldMapper
 from modules.speedometer import Speedometer
 from modules.annotators import get_annotators
+from modules.data_recorder import VehicleDataRecorder
 from zone.zone_trigger import create_zone
 
 def main():
@@ -31,10 +32,16 @@ def main():
     annotators = get_annotators(FPS)
     speedometer = Speedometer(mapper, FPS, MPS_TO_KPH)
     model = YOLO(MODEL_PATH)
+    
+    # 初始化数据记录器
+    data_recorder = VehicleDataRecorder(output_dir="results")
 
     print("="*60)
     print("车辆速度检测系统已启动")
     print("="*60)
+    print("数据记录:")
+    print("  - 实时记录车辆ID、速度和轨迹坐标")
+    print("  - 退出时自动保存到 results/ 目录")
     print("退出方式:")
     print("  - 在视频窗口按 'q' 键退出")
     print("  - 在视频窗口按 'ESC' 键退出")
@@ -69,6 +76,24 @@ def main():
             speedometer.update_with_trace(trace_id, trace)
             speed = speedometer.get_current_speed(trace_id)
             labels.append(f"#Vehicle Id:{trace_id} Speed:{speed} km/h")
+            
+            # 记录车辆数据
+            if trace is not None and len(trace) > 0:
+                # 获取世界坐标轨迹
+                try:
+                    world_trace = mapper.map(trace)
+                except Exception:
+                    world_trace = None
+                # 记录数据
+                data_recorder.record_vehicle(
+                    vehicle_id=trace_id,
+                    speed=speed,
+                    image_trace=trace,
+                    world_trace=world_trace
+                )
+        
+        # 进入下一帧
+        data_recorder.next_frame()
 
         # frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         # frame = cv.cvtColor(frame_gray, cv.COLOR_GRAY2BGR)
@@ -96,6 +121,20 @@ def main():
 
     cap.release()
     cv.destroyAllWindows()
+    
+    # 保存数据
+    print("\n正在保存车辆数据...")
+    try:
+        stats = data_recorder.get_statistics()
+        print(f"\n统计信息:")
+        print(f"  - 检测到车辆数: {stats['total_vehicles']}")
+        print(f"  - 总记录数: {stats['total_records']}")
+        print(f"  - 总帧数: {stats['total_frames']}")
+        
+        data_recorder.save_all()
+    except Exception as e:
+        print(f"保存数据时出错: {e}")
+    
     print("程序已正常退出")
 
 if __name__ == "__main__":
