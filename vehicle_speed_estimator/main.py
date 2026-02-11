@@ -75,7 +75,7 @@ def main():
             trace = annotators["trace"].trace.get(trace_id)
             speedometer.update_with_trace(trace_id, trace)
             speed = speedometer.get_current_speed(trace_id)
-            labels.append(f"#Vehicle Id:{trace_id} Speed:{speed} km/h")
+            labels.append(f"#Id:{trace_id} Speed:{speed} km/h")
             
             # 记录车辆数据
             if trace is not None and len(trace) > 0:
