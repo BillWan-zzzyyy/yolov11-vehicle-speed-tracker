@@ -11,6 +11,7 @@ from modules.mapping import Cam2WorldMapper
 from modules.speedometer import Speedometer
 from modules.annotators import get_annotators
 from modules.data_recorder import VehicleDataRecorder
+from modules.video_recorder import AsyncVideoRecorder
 from zone.zone_trigger import create_zone
 
 def main():
@@ -35,6 +36,16 @@ def main():
     
     # 初始化数据记录器
     data_recorder = VehicleDataRecorder(output_dir="results")
+    video_recorder = AsyncVideoRecorder(
+        output_dir=RECORD_OUTPUT_DIR,
+        frame_size=(video_info.width, video_info.height),
+        fps=FPS,
+        filename_prefix=RECORD_OUTPUT_PREFIX,
+        codec=RECORD_OUTPUT_CODEC,
+        queue_size=RECORD_OUTPUT_QUEUE_SIZE,
+        drop_frames=RECORD_OUTPUT_DROP_FRAMES,
+        enabled=RECORD_OUTPUT_VIDEO,
+    )
 
     print("="*60)
     print("车辆速度检测系统已启动")
@@ -47,7 +58,19 @@ def main():
     print("  - 在视频窗口按 'ESC' 键退出")
     print("  - 关闭视频窗口退出")
     print("  - 视频播放完毕自动退出")
+    if video_recorder.enabled:
+        print(f"视频录制:")
+        print(f"  - 已启用异步录制: {video_recorder.output_path}")
+    else:
+        print("视频录制:")
+        print("  - 未启用或初始化失败")
     print("="*60)
+
+    # 处理耗时统计（毫秒）
+    processing_time_total_ms = 0.0
+    processing_time_min_ms = float("inf")
+    processing_time_max_ms = 0.0
+    processed_frame_count = 0
 
     while True:
         start_time = time.time()  # 记录开始时间
@@ -101,11 +124,16 @@ def main():
         frame = annotators["bbox"].annotate(frame, detections)
         frame = annotators["trace"].annotate(frame, detections)
         frame = annotators["label"].annotate(frame, detections, labels=labels)
+        video_recorder.write(frame)
 
         cv.imshow("Vehicle Speed Estimation - YOLOv11", frame)
         
         # 计算处理时间，动态调整等待时间
         processing_time = (time.time() - start_time) * 1000  # 转换为毫秒
+        processing_time_total_ms += processing_time
+        processing_time_min_ms = min(processing_time_min_ms, processing_time)
+        processing_time_max_ms = max(processing_time_max_ms, processing_time)
+        processed_frame_count += 1
         wait_time = max(1, int(frame_delay - processing_time))
         
         # 支持多种退出方式
@@ -120,6 +148,7 @@ def main():
             break
 
     cap.release()
+    record_stats = video_recorder.close()
     cv.destroyAllWindows()
     
     # 保存数据
@@ -130,6 +159,15 @@ def main():
         print(f"  - 检测到车辆数: {stats['total_vehicles']}")
         print(f"  - 总记录数: {stats['total_records']}")
         print(f"  - 总帧数: {stats['total_frames']}")
+        if processed_frame_count > 0:
+            avg_processing_time_ms = processing_time_total_ms / processed_frame_count
+            print(f"  - 单帧处理耗时(平均): {avg_processing_time_ms:.2f} ms")
+            print(f"  - 单帧处理耗时(最小): {processing_time_min_ms:.2f} ms")
+            print(f"  - 单帧处理耗时(最大): {processing_time_max_ms:.2f} ms")
+        if record_stats["enabled"]:
+            print(f"  - 录制输出: {record_stats['output_path']}")
+            print(f"  - 录制写入帧: {record_stats['frames_written']}")
+            print(f"  - 录制丢帧: {record_stats['frames_dropped']}")
         
         data_recorder.save_all()
     except Exception as e:

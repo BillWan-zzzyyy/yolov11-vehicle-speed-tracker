@@ -15,3 +15,11 @@ MODEL_PATH = "models/yolo11n.pt"
 MPS_TO_KPH = 3.6
 CLASSES_TO_TRACK = [0, 1, 2, 5, 7]  #person, bicycle， car, bus, truck
 CONFIDENCE_THRESHOLD = 0.25
+
+# 实时录制配置
+RECORD_OUTPUT_VIDEO = True
+RECORD_OUTPUT_DIR = "results"
+RECORD_OUTPUT_PREFIX = "tracked_video"
+RECORD_OUTPUT_CODEC = "mp4v"
+RECORD_OUTPUT_QUEUE_SIZE = 100
+RECORD_OUTPUT_DROP_FRAMES = True
