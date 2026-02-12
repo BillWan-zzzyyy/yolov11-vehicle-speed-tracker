@@ -3,7 +3,7 @@
 # VIDEO_PATH = "assets\test3.mp4"
 
 #mac
-VIDEO_PATH = "assets/VeronaRd.mp4"
+VIDEO_PATH = "assets/test6.mp4"
 
 #no downloaded video
 VIDEO_URL = "https://drive.google.com/uc?export=download&id=1fYb05GW0sWeI1EiTfcbjOtGBrdIuPq4U"

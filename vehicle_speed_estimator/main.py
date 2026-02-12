@@ -1,6 +1,7 @@
 import cv2 as cv
 from ultralytics import YOLO
 import supervision as sv
+import numpy as np
 import time  # 添加这个导入
 
 from utils.downloader import download_video_if_needed
@@ -91,7 +92,17 @@ def main():
 
         detections = sv.Detections.from_ultralytics(result[0])
         detections = detections[zone.trigger(detections=detections)]
-        trace_ids = detections.tracker_id
+
+        # 过滤无效 tracker_id，避免 None 导致遍历报错
+        tracker_ids = detections.tracker_id
+        if tracker_ids is None:
+            valid_mask = np.zeros(len(detections), dtype=bool)
+        else:
+            valid_mask = np.array([tid is not None for tid in tracker_ids], dtype=bool)
+        detections = detections[valid_mask]
+        has_valid_tracker_ids = detections.tracker_id is not None and len(detections) > 0
+        trace_ids = detections.tracker_id if has_valid_tracker_ids else []
+
         labels = []
 
         for trace_id in trace_ids:
@@ -122,8 +133,9 @@ def main():
         # frame = cv.cvtColor(frame_gray, cv.COLOR_GRAY2BGR)
 
         frame = annotators["bbox"].annotate(frame, detections)
-        frame = annotators["trace"].annotate(frame, detections)
-        frame = annotators["label"].annotate(frame, detections, labels=labels)
+        if has_valid_tracker_ids:
+            frame = annotators["trace"].annotate(frame, detections)
+            frame = annotators["label"].annotate(frame, detections, labels=labels)
         video_recorder.write(frame)
 
         cv.imshow("Vehicle Speed Estimation - YOLOv11", frame)
