@@ -5,7 +5,7 @@ from .settings import (
     VIDEO_NAME,
     VIDEO_DOWNLOAD_PATH,
     MODEL_PATH,
-    MPS_TO_KPH,
+    MPS_TO_MPH,
     CLASSES_TO_TRACK,
     CONFIDENCE_THRESHOLD,
     RECORD_OUTPUT_VIDEO,

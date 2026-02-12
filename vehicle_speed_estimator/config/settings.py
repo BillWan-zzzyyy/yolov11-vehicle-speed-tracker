@@ -12,7 +12,7 @@ VIDEO_DOWNLOAD_PATH = "assets"  # 下载视频保存的文件夹
 
 # 模型配置
 MODEL_PATH = "models/yolo11n.pt"
-MPS_TO_KPH = 3.6
+MPS_TO_MPH = 2.2369362921
 CLASSES_TO_TRACK = [0, 1, 2, 5, 7]  #person, bicycle， car, bus, truck
 CONFIDENCE_THRESHOLD = 0.25
 

@@ -31,7 +31,7 @@ def main():
     mapper.find_perspective_transform(IMAGE_POINTS, WORLD_POINTS)
     zone = create_zone()
     annotators = get_annotators(FPS)
-    speedometer = Speedometer(mapper, FPS, MPS_TO_KPH)
+    speedometer = Speedometer(mapper, FPS, MPS_TO_MPH)
     model = YOLO(MODEL_PATH)
     
     # 初始化数据记录器
@@ -98,7 +98,7 @@ def main():
             trace = annotators["trace"].trace.get(trace_id)
             speedometer.update_with_trace(trace_id, trace)
             speed = speedometer.get_current_speed(trace_id)
-            labels.append(f"#Id:{trace_id} Speed:{speed} km/h")
+            labels.append(f"#Id:{trace_id} Speed:{speed} mile/h")
             
             # 记录车辆数据
             if trace is not None and len(trace) > 0:

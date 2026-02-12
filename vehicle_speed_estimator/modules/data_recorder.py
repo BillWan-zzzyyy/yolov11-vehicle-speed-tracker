@@ -36,7 +36,7 @@ class VehicleDataRecorder:
         
         参数:
             vehicle_id: 车辆ID
-            speed: 当前速度 (km/h)
+            speed: 当前速度 (mile/h)
             image_trace: 图像坐标轨迹 [(x1, y1), (x2, y2), ...]
             world_trace: 世界坐标轨迹 [(x1, y1), (x2, y2), ...] (可选)
         """
@@ -59,7 +59,7 @@ class VehicleDataRecorder:
         record = {
             "frame": self.current_frame,
             "timestamp": timestamp,
-            "speed_kmh": float(speed),
+            "speed_mph": float(speed),
             "image_position": {
                 "x": float(current_image_pos[0]) if current_image_pos else None,
                 "y": float(current_image_pos[1]) if current_image_pos else None
@@ -93,7 +93,7 @@ class VehicleDataRecorder:
             writer = csv.writer(f)
             # 写入表头
             writer.writerow([
-                "Vehicle_ID", "Frame", "Timestamp", "Speed_kmh",
+                "Vehicle_ID", "Frame", "Timestamp", "Speed_mph",
                 "Image_X", "Image_Y", "World_X", "World_Y",
                 "Image_Trace_Length", "World_Trace_Length"
             ])
@@ -105,7 +105,7 @@ class VehicleDataRecorder:
                         vehicle_id,
                         record["frame"],
                         record["timestamp"],
-                        record["speed_kmh"],
+                        record["speed_mph"],
                         record["image_position"]["x"],
                         record["image_position"]["y"],
                         record["world_position"]["x"],
@@ -165,7 +165,7 @@ class VehicleDataRecorder:
             writer = csv.writer(f)
             writer.writerow([
                 "Vehicle_ID", "Total_Frames", "First_Frame", "Last_Frame",
-                "Max_Speed_kmh", "Min_Speed_kmh", "Avg_Speed_kmh",
+                "Max_Speed_mph", "Min_Speed_mph", "Avg_Speed_mph",
                 "Total_Distance_m", "Duration_seconds"
             ])
             
@@ -173,7 +173,7 @@ class VehicleDataRecorder:
                 if not records:
                     continue
                 
-                speeds = [r["speed_kmh"] for r in records if r["speed_kmh"] > 0]
+                speeds = [r["speed_mph"] for r in records if r["speed_mph"] > 0]
                 world_positions = [r["world_position"] for r in records 
                                  if r["world_position"]["x"] is not None]
                 
