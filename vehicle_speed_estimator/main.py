@@ -15,6 +15,21 @@ from modules.data_recorder import VehicleDataRecorder
 from modules.video_recorder import AsyncVideoRecorder
 from zone.zone_trigger import create_zone
 
+
+def draw_monitoring_area_overlay(frame, image_points):
+    """Draw only thin light-yellow boundary for ROI."""
+    points = np.array(image_points, dtype=np.int32)
+    if points.shape[0] != 4:
+        return frame
+
+    cv.polylines(frame, [points], True, (170, 230, 255), 1)
+    for label, (x, y) in zip(("A", "B", "C", "D"), points):
+        cv.putText(frame, label, (int(x) + 8, int(y) - 8),
+                   cv.FONT_HERSHEY_SIMPLEX, 0.7, (180, 240, 255), 2)
+
+    return frame
+
+
 def main():
     source_video = download_video_if_needed()
     video_info = sv.VideoInfo.from_video_path(source_video)
@@ -36,7 +51,7 @@ def main():
     model = YOLO(MODEL_PATH)
     
     # 初始化数据记录器
-    data_recorder = VehicleDataRecorder(output_dir="results")
+    data_recorder = VehicleDataRecorder(output_dir="results") if SAVE_VEHICLE_DATA else None
     video_recorder = AsyncVideoRecorder(
         output_dir=RECORD_OUTPUT_DIR,
         frame_size=(video_info.width, video_info.height),
@@ -52,8 +67,11 @@ def main():
     print("车辆速度检测系统已启动")
     print("="*60)
     print("数据记录:")
-    print("  - 实时记录车辆ID、速度和轨迹坐标")
-    print("  - 退出时自动保存到 results/ 目录")
+    if SAVE_VEHICLE_DATA:
+        print("  - 已启用：实时记录车辆ID、速度和轨迹坐标")
+        print("  - 退出时自动保存到 results/ 目录")
+    else:
+        print("  - 已关闭：不保存车辆CSV/JSON/摘要")
     print("退出方式:")
     print("  - 在视频窗口按 'q' 键退出")
     print("  - 在视频窗口按 'ESC' 键退出")
@@ -119,15 +137,17 @@ def main():
                 except Exception:
                     world_trace = None
                 # 记录数据
-                data_recorder.record_vehicle(
-                    vehicle_id=trace_id,
-                    speed=speed,
-                    image_trace=trace,
-                    world_trace=world_trace
-                )
+                if data_recorder is not None:
+                    data_recorder.record_vehicle(
+                        vehicle_id=trace_id,
+                        speed=speed,
+                        image_trace=trace,
+                        world_trace=world_trace
+                    )
         
         # 进入下一帧
-        data_recorder.next_frame()
+        if data_recorder is not None:
+            data_recorder.next_frame()
 
         # frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         # frame = cv.cvtColor(frame_gray, cv.COLOR_GRAY2BGR)
@@ -136,6 +156,10 @@ def main():
         if has_valid_tracker_ids:
             frame = annotators["trace"].annotate(frame, detections)
             frame = annotators["label"].annotate(frame, detections, labels=labels)
+
+        # 可视化监测区域（浅灰色透明阴影 + A/B/C/D 标注）
+        if SHOW_MONITORING_AREA:
+            frame = draw_monitoring_area_overlay(frame, IMAGE_POINTS)
         video_recorder.write(frame)
 
         cv.imshow("Vehicle Speed Estimation - YOLOv11", frame)
@@ -164,9 +188,16 @@ def main():
     cv.destroyAllWindows()
     
     # 保存数据
-    print("\n正在保存车辆数据...")
+    if data_recorder is not None:
+        print("\n正在保存车辆数据...")
+    else:
+        print("\n车辆数据保存开关已关闭，跳过保存。")
     try:
-        stats = data_recorder.get_statistics()
+        stats = data_recorder.get_statistics() if data_recorder is not None else {
+            "total_vehicles": 0,
+            "total_records": 0,
+            "total_frames": processed_frame_count
+        }
         print(f"\n统计信息:")
         print(f"  - 检测到车辆数: {stats['total_vehicles']}")
         print(f"  - 总记录数: {stats['total_records']}")
@@ -181,7 +212,8 @@ def main():
             print(f"  - 录制写入帧: {record_stats['frames_written']}")
             print(f"  - 录制丢帧: {record_stats['frames_dropped']}")
         
-        data_recorder.save_all()
+        if data_recorder is not None:
+            data_recorder.save_all()
     except Exception as e:
         print(f"保存数据时出错: {e}")
     
