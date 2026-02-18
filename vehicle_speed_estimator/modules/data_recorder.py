@@ -21,7 +21,7 @@ class VehicleDataRecorder:
         os.makedirs(output_dir, exist_ok=True)
         
         # 存储车辆数据
-        # 格式: {vehicle_id: [{frame, timestamp, speed, image_coords, world_coords}, ...]}
+        # 格式: {vehicle_id: [{frame, timestamp, speed, class_name, image_coords, world_coords}, ...]}
         self.vehicle_data = defaultdict(list)
         
         # 当前帧号
@@ -30,7 +30,7 @@ class VehicleDataRecorder:
         # 记录开始时间
         self.start_time = datetime.now()
         
-    def record_vehicle(self, vehicle_id, speed, image_trace, world_trace=None):
+    def record_vehicle(self, vehicle_id, speed, image_trace, world_trace=None, class_name="unknown"):
         """
         记录车辆数据
         
@@ -39,6 +39,7 @@ class VehicleDataRecorder:
             speed: 当前速度 (mile/h)
             image_trace: 图像坐标轨迹 [(x1, y1), (x2, y2), ...]
             world_trace: 世界坐标轨迹 [(x1, y1), (x2, y2), ...] (可选)
+            class_name: 车辆类别名称，如 car、truck、bus
         """
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
         
@@ -60,6 +61,7 @@ class VehicleDataRecorder:
             "frame": self.current_frame,
             "timestamp": timestamp,
             "speed_mph": float(speed),
+            "class_name": str(class_name) if class_name else "unknown",
             "image_position": {
                 "x": float(current_image_pos[0]) if current_image_pos else None,
                 "y": float(current_image_pos[1]) if current_image_pos else None
@@ -93,7 +95,7 @@ class VehicleDataRecorder:
             writer = csv.writer(f)
             # 写入表头
             writer.writerow([
-                "Vehicle_ID", "Frame", "Timestamp", "Speed_mph",
+                "Vehicle_ID", "Class_Name", "Frame", "Timestamp", "Speed_mph",
                 "Image_X", "Image_Y", "World_X", "World_Y",
                 "Image_Trace_Length", "World_Trace_Length"
             ])
@@ -103,6 +105,7 @@ class VehicleDataRecorder:
                 for record in records:
                     writer.writerow([
                         vehicle_id,
+                        record.get("class_name", "unknown"),
                         record["frame"],
                         record["timestamp"],
                         record["speed_mph"],

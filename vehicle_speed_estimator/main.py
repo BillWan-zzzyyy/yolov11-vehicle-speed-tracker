@@ -23,6 +23,12 @@ def draw_monitoring_area_overlay(frame, image_points):
         return frame
 
     cv.polylines(frame, [points], True, (170, 230, 255), 1)
+    
+    # Add title "Monitoring Area"
+    title_pos = (int(points[0][0]), int(points[0][1]) - 20)
+    cv.putText(frame, "Monitoring Area", title_pos,
+               cv.FONT_HERSHEY_SIMPLEX, 0.7, (170, 230, 255), 2)
+
     for label, (x, y) in zip(("A", "B", "C", "D"), points):
         cv.putText(frame, label, (int(x) + 8, int(y) - 8),
                    cv.FONT_HERSHEY_SIMPLEX, 0.7, (180, 240, 255), 2)
@@ -120,6 +126,19 @@ def main():
         detections = detections[valid_mask]
         has_valid_tracker_ids = detections.tracker_id is not None and len(detections) > 0
         trace_ids = detections.tracker_id if has_valid_tracker_ids else []
+        class_name_by_trace_id = {}
+        if has_valid_tracker_ids:
+            class_ids = detections.class_id
+            model_names = getattr(model, "names", {})
+            for idx, trace_id in enumerate(trace_ids):
+                class_name = "unknown"
+                if class_ids is not None and idx < len(class_ids) and class_ids[idx] is not None:
+                    class_id = int(class_ids[idx])
+                    if isinstance(model_names, dict):
+                        class_name = model_names.get(class_id, "unknown")
+                    elif isinstance(model_names, (list, tuple)) and 0 <= class_id < len(model_names):
+                        class_name = model_names[class_id]
+                class_name_by_trace_id[trace_id] = str(class_name) if class_name else "unknown"
 
         labels = []
 
@@ -127,7 +146,8 @@ def main():
             trace = annotators["trace"].trace.get(trace_id)
             speedometer.update_with_trace(trace_id, trace)
             speed = speedometer.get_current_speed(trace_id)
-            labels.append(f"#Id:{trace_id} Speed:{speed} mile/h")
+            class_name = class_name_by_trace_id.get(trace_id, "unknown")
+            labels.append(f"{class_name} #Id:{trace_id} Speed:{speed} mile/h")
             
             # 记录车辆数据
             if trace is not None and len(trace) > 0:
@@ -142,7 +162,8 @@ def main():
                         vehicle_id=trace_id,
                         speed=speed,
                         image_trace=trace,
-                        world_trace=world_trace
+                        world_trace=world_trace,
+                        class_name=class_name
                     )
         
         # 进入下一帧
