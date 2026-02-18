@@ -30,3 +30,37 @@ SAVE_VEHICLE_DATA = True
 
 # 监测区域可视化开关（浅灰阴影 + A/B/C/D）
 SHOW_MONITORING_AREA = True
+
+# 车道编号配置
+# LANE_BOUNDARIES_X 为图像坐标系下的车道分界线 x 值，需按从左到右递增。
+# 例如 [900, 1300] 表示共 3 根车道：(<900)=1, [900,1300)=2, (>=1300)=3。
+ENABLE_LANE_ASSIGNMENT = True
+LANE_ASSIGNMENT_MODE = "line_segments"
+
+# 车道边界线（按从左到右顺序），每条边界线由两个点定义: [(x1, y1), (x2, y2)]
+# 使用 line_segments 模式时优先使用该配置；为空时自动回退到 LANE_BOUNDARIES_X。
+LANE_BOUNDARY_LINES = [[(583, 261), (1110, 1220)], [(646, 259), (1374, 1189)], [(716, 258), (1626, 1155)], [(772, 259), (1823, 1132)], [(820, 245), (2061, 1108)], [(1072, 247), (2367, 825)], [(1133, 244), (2460, 785)], [(1170, 233), (2546, 739)]]
+SHOW_LANE_BOUNDARY_LINES = True
+LANE_LINE_COLOR = (0, 0, 255)  # BGR 红色细线
+LANE_LINE_THICKNESS = 1
+
+# 应急车道配置（按边界线索引定义区间，索引从 1 开始）
+# 新配置优先：EMERGENCY_LANE_RULES
+# - {"type": "left_of", "boundary": 1}    => 第1条边界线左侧（第1车道）
+# - {"type": "between", "left": 1, "right": 2} => 第1和第2条边界线之间
+# - {"type": "right_of", "boundary": 4}   => 第4条边界线右侧
+# 当 EMERGENCY_LANE_RULES 为空时，回退使用 legacy 字段 EMERGENCY_LANE_BETWEEN_BOUNDARIES。
+EMERGENCY_LANE_ENABLED = True
+EMERGENCY_LANE_RULES = [
+    {"type": "left_of", "boundary": 1},
+    {"type": "right_of", "boundary": 8}
+]
+# legacy 回退字段：例如 (1, 2) 表示第1和第2条边界线之间的车道是应急车道。
+EMERGENCY_LANE_BETWEEN_BOUNDARIES = (1, 2)
+
+# 应急车辆可视化配置
+HIGHLIGHT_EMERGENCY_VEHICLES = True
+EMERGENCY_BBOX_COLOR = (0, 0, 255)  # BGR 红色
+EMERGENCY_BBOX_THICKNESS = 2
+
+

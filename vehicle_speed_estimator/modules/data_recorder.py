@@ -30,7 +30,16 @@ class VehicleDataRecorder:
         # 记录开始时间
         self.start_time = datetime.now()
         
-    def record_vehicle(self, vehicle_id, speed, image_trace, world_trace=None, class_name="unknown"):
+    def record_vehicle(
+        self,
+        vehicle_id,
+        speed,
+        image_trace,
+        world_trace=None,
+        class_name="unknown",
+        lane_id=None,
+        is_emergency_lane=False
+    ):
         """
         记录车辆数据
         
@@ -40,6 +49,8 @@ class VehicleDataRecorder:
             image_trace: 图像坐标轨迹 [(x1, y1), (x2, y2), ...]
             world_trace: 世界坐标轨迹 [(x1, y1), (x2, y2), ...] (可选)
             class_name: 车辆类别名称，如 car、truck、bus
+            lane_id: 车辆所在车道编号（从1开始，可选）
+            is_emergency_lane: 是否处于应急车道
         """
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
         
@@ -62,6 +73,8 @@ class VehicleDataRecorder:
             "timestamp": timestamp,
             "speed_mph": float(speed),
             "class_name": str(class_name) if class_name else "unknown",
+            "lane_id": int(lane_id) if lane_id is not None else None,
+            "is_emergency_lane": bool(is_emergency_lane),
             "image_position": {
                 "x": float(current_image_pos[0]) if current_image_pos else None,
                 "y": float(current_image_pos[1]) if current_image_pos else None
@@ -95,7 +108,7 @@ class VehicleDataRecorder:
             writer = csv.writer(f)
             # 写入表头
             writer.writerow([
-                "Vehicle_ID", "Class_Name", "Frame", "Timestamp", "Speed_mph",
+                "Vehicle_ID", "Class_Name", "Lane_ID", "Is_Emergency_Lane", "Frame", "Timestamp", "Speed_mph",
                 "Image_X", "Image_Y", "World_X", "World_Y",
                 "Image_Trace_Length", "World_Trace_Length"
             ])
@@ -106,6 +119,8 @@ class VehicleDataRecorder:
                     writer.writerow([
                         vehicle_id,
                         record.get("class_name", "unknown"),
+                        record.get("lane_id"),
+                        record.get("is_emergency_lane", False),
                         record["frame"],
                         record["timestamp"],
                         record["speed_mph"],

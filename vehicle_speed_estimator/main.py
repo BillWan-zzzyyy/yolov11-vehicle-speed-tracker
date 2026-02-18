@@ -12,6 +12,7 @@ from modules.mapping import Cam2WorldMapper
 from modules.speedometer import Speedometer
 from modules.annotators import get_annotators
 from modules.data_recorder import VehicleDataRecorder
+from modules.lane_assigner import LaneAssigner
 from modules.video_recorder import AsyncVideoRecorder
 from zone.zone_trigger import create_zone
 
@@ -36,6 +37,44 @@ def draw_monitoring_area_overlay(frame, image_points):
     return frame
 
 
+def draw_lane_boundary_lines_overlay(frame, lane_lines, line_color=(0, 0, 255), line_thickness=1):
+    """
+    Draw red thin lane boundary lines with short labels.
+
+    Args:
+        frame: current frame.
+        lane_lines: boundary line list, each item is [(x1, y1), (x2, y2)].
+        line_color: BGR color tuple.
+        line_thickness: line thickness.
+    """
+    if not lane_lines:
+        return frame
+
+    for idx, line in enumerate(lane_lines, start=1):
+        if line is None or len(line) != 2:
+            continue
+        p1, p2 = line[0], line[1]
+        if p1 is None or p2 is None or len(p1) != 2 or len(p2) != 2:
+            continue
+
+        x1, y1 = int(p1[0]), int(p1[1])
+        x2, y2 = int(p2[0]), int(p2[1])
+        cv.line(frame, (x1, y1), (x2, y2), line_color, line_thickness)
+
+        label_x = int((x1 + x2) / 2)
+        label_y = int((y1 + y2) / 2)
+        cv.putText(
+            frame,
+            f"B{idx}",
+            (label_x + 6, label_y - 6),
+            cv.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            line_color,
+            1
+        )
+    return frame
+
+
 def main():
     source_video = download_video_if_needed()
     video_info = sv.VideoInfo.from_video_path(source_video)
@@ -55,6 +94,26 @@ def main():
     annotators = get_annotators(FPS)
     speedometer = Speedometer(mapper, FPS, MPS_TO_MPH)
     model = YOLO(MODEL_PATH)
+    lane_assignment_mode = globals().get("LANE_ASSIGNMENT_MODE", "x_threshold")
+    lane_boundary_lines = globals().get("LANE_BOUNDARY_LINES", [])
+    lane_boundaries_x = globals().get("LANE_BOUNDARIES_X", [])
+    emergency_lane_enabled = globals().get("EMERGENCY_LANE_ENABLED", False)
+    emergency_lane_rules = globals().get("EMERGENCY_LANE_RULES", [])
+    emergency_lane_between_boundaries = globals().get("EMERGENCY_LANE_BETWEEN_BOUNDARIES", None)
+    highlight_emergency_vehicles = globals().get("HIGHLIGHT_EMERGENCY_VEHICLES", False)
+    show_lane_boundary_lines = globals().get("SHOW_LANE_BOUNDARY_LINES", False)
+    lane_line_color = tuple(globals().get("LANE_LINE_COLOR", (0, 0, 255)))
+    lane_line_thickness = int(globals().get("LANE_LINE_THICKNESS", 1))
+    emergency_bbox_color = tuple(globals().get("EMERGENCY_BBOX_COLOR", (0, 0, 255)))
+    emergency_bbox_thickness = int(globals().get("EMERGENCY_BBOX_THICKNESS", 2))
+    lane_assigner = LaneAssigner(
+        lane_boundaries_x=lane_boundaries_x,
+        lane_boundary_lines=lane_boundary_lines,
+        mode=lane_assignment_mode,
+        emergency_lane_enabled=emergency_lane_enabled,
+        emergency_lane_between_boundaries=emergency_lane_between_boundaries,
+        emergency_lane_rules=emergency_lane_rules
+    ) if ENABLE_LANE_ASSIGNMENT else None
     
     # 初始化数据记录器
     data_recorder = VehicleDataRecorder(output_dir="results") if SAVE_VEHICLE_DATA else None
@@ -141,13 +200,23 @@ def main():
                 class_name_by_trace_id[trace_id] = str(class_name) if class_name else "unknown"
 
         labels = []
+        emergency_trace_ids = set()
 
-        for trace_id in trace_ids:
+        for idx, trace_id in enumerate(trace_ids):
             trace = annotators["trace"].trace.get(trace_id)
             speedometer.update_with_trace(trace_id, trace)
             speed = speedometer.get_current_speed(trace_id)
             class_name = class_name_by_trace_id.get(trace_id, "unknown")
-            labels.append(f"{class_name} #Id:{trace_id} Speed:{speed} mile/h")
+            lane_id = None
+            is_emergency_lane = False
+            if lane_assigner is not None and trace is not None and len(trace) > 0:
+                lane_id = lane_assigner.get_lane_id_from_point(trace[-1])
+                is_emergency_lane = lane_assigner.is_emergency_lane(lane_id)
+            if is_emergency_lane:
+                emergency_trace_ids.add(trace_id)
+            lane_text = f" Lane:{lane_id}" if lane_id is not None else ""
+            emergency_text = " Emergency" if is_emergency_lane else ""
+            labels.append(f"{class_name} #Id:{trace_id} Speed:{speed} mile/h{lane_text}{emergency_text}")
             
             # 记录车辆数据
             if trace is not None and len(trace) > 0:
@@ -163,7 +232,9 @@ def main():
                         speed=speed,
                         image_trace=trace,
                         world_trace=world_trace,
-                        class_name=class_name
+                        class_name=class_name,
+                        lane_id=lane_id,
+                        is_emergency_lane=is_emergency_lane
                     )
         
         # 进入下一帧
@@ -174,9 +245,28 @@ def main():
         # frame = cv.cvtColor(frame_gray, cv.COLOR_GRAY2BGR)
 
         frame = annotators["bbox"].annotate(frame, detections)
+        if highlight_emergency_vehicles and has_valid_tracker_ids and len(detections) > 0:
+            for idx, trace_id in enumerate(trace_ids):
+                if trace_id in emergency_trace_ids and idx < len(detections.xyxy):
+                    x1, y1, x2, y2 = detections.xyxy[idx]
+                    cv.rectangle(
+                        frame,
+                        (int(x1), int(y1)),
+                        (int(x2), int(y2)),
+                        emergency_bbox_color,
+                        emergency_bbox_thickness
+                    )
         if has_valid_tracker_ids:
             frame = annotators["trace"].annotate(frame, detections)
             frame = annotators["label"].annotate(frame, detections, labels=labels)
+
+        if show_lane_boundary_lines:
+            frame = draw_lane_boundary_lines_overlay(
+                frame=frame,
+                lane_lines=lane_boundary_lines,
+                line_color=lane_line_color,
+                line_thickness=lane_line_thickness
+            )
 
         # 可视化监测区域（浅灰色透明阴影 + A/B/C/D 标注）
         if SHOW_MONITORING_AREA:
