@@ -3,7 +3,7 @@
 # VIDEO_PATH = "assets\test3.mp4"
 
 #mac
-VIDEO_PATH = "assets/VeronaRd.mp4"
+VIDEO_PATH = "assets/crash2.mp4"
 # VeronaRd
 
 #no downloaded video
