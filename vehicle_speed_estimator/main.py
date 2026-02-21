@@ -17,29 +17,63 @@ from modules.video_recorder import AsyncVideoRecorder
 from zone.zone_trigger import create_zone
 
 
-def draw_monitoring_area_overlay(frame, image_points):
-    """Draw only thin light-yellow boundary for ROI."""
+def draw_monitoring_area_overlay(
+    frame,
+    image_points,
+    line_color=(170, 230, 255),
+    line_thickness=3,
+    label_text="Monitoring Area",
+    label_font_scale=0.9,
+    label_thickness=3,
+    label_offset_x=0,
+    label_offset_y=24,
+    label_margin_x=8,
+    label_margin_y=8
+):
+    """Draw ROI boundary and put a bold title below it."""
     points = np.array(image_points, dtype=np.int32)
     if points.shape[0] != 4:
         return frame
 
-    cv.polylines(frame, [points], True, (170, 230, 255), 1)
-    
-    # Add title "Monitoring Area"
-    title_pos = (int(points[0][0]), int(points[0][1]) - 20)
-    cv.putText(frame, "Monitoring Area", title_pos,
-               cv.FONT_HERSHEY_SIMPLEX, 0.7, (170, 230, 255), 2)
+    cv.polylines(frame, [points], True, line_color, max(1, int(line_thickness)))
 
-    for label, (x, y) in zip(("A", "B", "C", "D"), points):
-        cv.putText(frame, label, (int(x) + 8, int(y) - 8),
-                   cv.FONT_HERSHEY_SIMPLEX, 0.7, (180, 240, 255), 2)
+    frame_height, frame_width = frame.shape[:2]
+    text_size, baseline = cv.getTextSize(
+        str(label_text),
+        cv.FONT_HERSHEY_SIMPLEX,
+        float(label_font_scale),
+        max(1, int(label_thickness))
+    )
+    text_width, text_height = text_size
+
+    min_x = int(np.min(points[:, 0]))
+    max_y = int(np.max(points[:, 1]))
+    preferred_x = min_x + int(label_offset_x)
+    preferred_y = max_y + int(label_offset_y) + text_height
+
+    max_x = max(int(label_margin_x), frame_width - text_width - int(label_margin_x))
+    label_x = min(max(preferred_x, int(label_margin_x)), max_x)
+
+    min_baseline_y = int(label_margin_y) + text_height
+    max_baseline_y = frame_height - int(label_margin_y) - baseline
+    label_y = min(max(preferred_y, min_baseline_y), max_baseline_y)
+
+    cv.putText(
+        frame,
+        str(label_text),
+        (label_x, label_y),
+        cv.FONT_HERSHEY_SIMPLEX,
+        float(label_font_scale),
+        line_color,
+        max(1, int(label_thickness))
+    )
 
     return frame
 
 
 def draw_lane_boundary_lines_overlay(frame, lane_lines, line_color=(0, 0, 255), line_thickness=1):
     """
-    Draw red thin lane boundary lines with short labels.
+    Draw lane boundary lines without per-line labels.
 
     Args:
         frame: current frame.
@@ -50,7 +84,7 @@ def draw_lane_boundary_lines_overlay(frame, lane_lines, line_color=(0, 0, 255), 
     if not lane_lines:
         return frame
 
-    for idx, line in enumerate(lane_lines, start=1):
+    for line in lane_lines:
         if line is None or len(line) != 2:
             continue
         p1, p2 = line[0], line[1]
@@ -61,17 +95,6 @@ def draw_lane_boundary_lines_overlay(frame, lane_lines, line_color=(0, 0, 255), 
         x2, y2 = int(p2[0]), int(p2[1])
         cv.line(frame, (x1, y1), (x2, y2), line_color, line_thickness)
 
-        label_x = int((x1 + x2) / 2)
-        label_y = int((y1 + y2) / 2)
-        cv.putText(
-            frame,
-            f"B{idx}",
-            (label_x + 6, label_y - 6),
-            cv.FONT_HERSHEY_SIMPLEX,
-            0.5,
-            line_color,
-            1
-        )
     return frame
 
 
@@ -104,6 +127,15 @@ def main():
     show_lane_boundary_lines = globals().get("SHOW_LANE_BOUNDARY_LINES", False)
     lane_line_color = tuple(globals().get("LANE_LINE_COLOR", (0, 0, 255)))
     lane_line_thickness = int(globals().get("LANE_LINE_THICKNESS", 1))
+    monitoring_area_line_color = tuple(globals().get("MONITORING_AREA_LINE_COLOR", (170, 230, 255)))
+    monitoring_area_line_thickness = int(globals().get("MONITORING_AREA_LINE_THICKNESS", 3))
+    monitoring_area_label_text = str(globals().get("MONITORING_AREA_LABEL_TEXT", "Monitoring Area"))
+    monitoring_area_label_font_scale = float(globals().get("MONITORING_AREA_LABEL_FONT_SCALE", 0.9))
+    monitoring_area_label_thickness = int(globals().get("MONITORING_AREA_LABEL_THICKNESS", 3))
+    monitoring_area_label_offset_x = int(globals().get("MONITORING_AREA_LABEL_OFFSET_X", 0))
+    monitoring_area_label_offset_y = int(globals().get("MONITORING_AREA_LABEL_OFFSET_Y", 24))
+    monitoring_area_label_margin_x = int(globals().get("MONITORING_AREA_LABEL_MARGIN_X", 8))
+    monitoring_area_label_margin_y = int(globals().get("MONITORING_AREA_LABEL_MARGIN_Y", 8))
     emergency_bbox_color = tuple(globals().get("EMERGENCY_BBOX_COLOR", (0, 0, 255)))
     emergency_bbox_thickness = int(globals().get("EMERGENCY_BBOX_THICKNESS", 2))
     lane_assigner = LaneAssigner(
@@ -268,9 +300,21 @@ def main():
                 line_thickness=lane_line_thickness
             )
 
-        # 可视化监测区域（浅灰色透明阴影 + A/B/C/D 标注）
+        # 可视化监测区域（边界线 + 下方标题 + A/B/C/D 标注）
         if SHOW_MONITORING_AREA:
-            frame = draw_monitoring_area_overlay(frame, IMAGE_POINTS)
+            frame = draw_monitoring_area_overlay(
+                frame=frame,
+                image_points=IMAGE_POINTS,
+                line_color=monitoring_area_line_color,
+                line_thickness=monitoring_area_line_thickness,
+                label_text=monitoring_area_label_text,
+                label_font_scale=monitoring_area_label_font_scale,
+                label_thickness=monitoring_area_label_thickness,
+                label_offset_x=monitoring_area_label_offset_x,
+                label_offset_y=monitoring_area_label_offset_y,
+                label_margin_x=monitoring_area_label_margin_x,
+                label_margin_y=monitoring_area_label_margin_y
+            )
         video_recorder.write(frame)
 
         cv.imshow("Vehicle Speed Estimation - YOLOv11", frame)
