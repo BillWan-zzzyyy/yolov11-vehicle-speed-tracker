@@ -143,6 +143,10 @@ def main():
     highlight_speeding_vehicles = bool(globals().get("HIGHLIGHT_SPEEDING_VEHICLES", False))
     speeding_bbox_color = tuple(globals().get("SPEEDING_BBOX_COLOR", (0, 0, 255)))
     speeding_bbox_thickness = int(globals().get("SPEEDING_BBOX_THICKNESS", 2))
+    highlight_speeding_traces = bool(globals().get("HIGHLIGHT_SPEEDING_TRACES", False))
+    speeding_trace_color = tuple(globals().get("SPEEDING_TRACE_COLOR", speeding_bbox_color))
+    speeding_trace_thickness = int(globals().get("SPEEDING_TRACE_THICKNESS", 2))
+    highlight_speeding_labels = bool(globals().get("HIGHLIGHT_SPEEDING_LABELS", False))
     lane_assigner = LaneAssigner(
         lane_boundaries_x=lane_boundaries_x,
         lane_boundary_lines=lane_boundary_lines,
@@ -313,7 +317,34 @@ def main():
                     )
         if has_valid_tracker_ids:
             frame = annotators["trace"].annotate(frame, detections)
-            frame = annotators["label"].annotate(frame, detections, labels=labels)
+            if highlight_speeding_traces:
+                for trace_id in speeding_trace_ids:
+                    trace_points = annotators["trace"].trace.get(trace_id)
+                    if trace_points is None or len(trace_points) < 2:
+                        continue
+                    polyline_points = np.array(trace_points, dtype=np.int32).reshape(-1, 1, 2)
+                    cv.polylines(
+                        frame,
+                        [polyline_points],
+                        False,
+                        speeding_trace_color,
+                        speeding_trace_thickness
+                    )
+            if highlight_speeding_labels and len(speeding_trace_ids) > 0:
+                speeding_mask = np.array([tid in speeding_trace_ids for tid in trace_ids], dtype=bool)
+                
+                speeding_detections = detections[speeding_mask]
+                normal_detections = detections[~speeding_mask]
+                
+                speeding_labels = [label for i, label in enumerate(labels) if speeding_mask[i]]
+                normal_labels = [label for i, label in enumerate(labels) if not speeding_mask[i]]
+                
+                if len(speeding_detections) > 0:
+                    frame = annotators["speeding_label"].annotate(frame, speeding_detections, labels=speeding_labels)
+                if len(normal_detections) > 0:
+                    frame = annotators["label"].annotate(frame, normal_detections, labels=normal_labels)
+            else:
+                frame = annotators["label"].annotate(frame, detections, labels=labels)
 
         if show_lane_boundary_lines:
             frame = draw_lane_boundary_lines_overlay(
