@@ -138,6 +138,11 @@ def main():
     monitoring_area_label_margin_y = int(globals().get("MONITORING_AREA_LABEL_MARGIN_Y", 8))
     emergency_bbox_color = tuple(globals().get("EMERGENCY_BBOX_COLOR", (0, 0, 255)))
     emergency_bbox_thickness = int(globals().get("EMERGENCY_BBOX_THICKNESS", 2))
+    speed_limit_mph = float(globals().get("SPEED_LIMIT_MPH", 65))
+    max_valid_speed_mph = float(globals().get("MAX_VALID_SPEED_MPH", 95))
+    highlight_speeding_vehicles = bool(globals().get("HIGHLIGHT_SPEEDING_VEHICLES", False))
+    speeding_bbox_color = tuple(globals().get("SPEEDING_BBOX_COLOR", (0, 0, 255)))
+    speeding_bbox_thickness = int(globals().get("SPEEDING_BBOX_THICKNESS", 2))
     lane_assigner = LaneAssigner(
         lane_boundaries_x=lane_boundaries_x,
         lane_boundary_lines=lane_boundary_lines,
@@ -233,11 +238,14 @@ def main():
 
         labels = []
         emergency_trace_ids = set()
+        speeding_trace_ids = set()
 
         for idx, trace_id in enumerate(trace_ids):
             trace = annotators["trace"].trace.get(trace_id)
             speedometer.update_with_trace(trace_id, trace)
             speed = speedometer.get_current_speed(trace_id)
+            is_speeding = speed > speed_limit_mph
+            is_outlier = speed > max_valid_speed_mph
             class_name = class_name_by_trace_id.get(trace_id, "unknown")
             lane_id = None
             is_emergency_lane = False
@@ -246,9 +254,12 @@ def main():
                 is_emergency_lane = lane_assigner.is_emergency_lane(lane_id)
             if is_emergency_lane:
                 emergency_trace_ids.add(trace_id)
+            if is_speeding:
+                speeding_trace_ids.add(trace_id)
             lane_text = f" Lane:{lane_id}" if lane_id is not None else ""
             emergency_text = " Emergency" if is_emergency_lane else ""
-            labels.append(f"{class_name} #Id:{trace_id} Speed:{speed} mile/h{lane_text}{emergency_text}")
+            speeding_text = " Speeding" if is_speeding else ""
+            labels.append(f"{class_name} #Id:{trace_id} Speed:{speed} mile/h{lane_text}{emergency_text}{speeding_text}")
             
             # 记录车辆数据
             if trace is not None and len(trace) > 0:
@@ -258,7 +269,7 @@ def main():
                 except Exception:
                     world_trace = None
                 # 记录数据
-                if data_recorder is not None:
+                if data_recorder is not None and not is_outlier:
                     data_recorder.record_vehicle(
                         vehicle_id=trace_id,
                         speed=speed,
@@ -266,7 +277,8 @@ def main():
                         world_trace=world_trace,
                         class_name=class_name,
                         lane_id=lane_id,
-                        is_emergency_lane=is_emergency_lane
+                        is_emergency_lane=is_emergency_lane,
+                        is_speeding=is_speeding
                     )
         
         # 进入下一帧
@@ -287,6 +299,17 @@ def main():
                         (int(x2), int(y2)),
                         emergency_bbox_color,
                         emergency_bbox_thickness
+                    )
+        if highlight_speeding_vehicles and has_valid_tracker_ids and len(detections) > 0:
+            for idx, trace_id in enumerate(trace_ids):
+                if trace_id in speeding_trace_ids and idx < len(detections.xyxy):
+                    x1, y1, x2, y2 = detections.xyxy[idx]
+                    cv.rectangle(
+                        frame,
+                        (int(x1), int(y1)),
+                        (int(x2), int(y2)),
+                        speeding_bbox_color,
+                        speeding_bbox_thickness
                     )
         if has_valid_tracker_ids:
             frame = annotators["trace"].annotate(frame, detections)
