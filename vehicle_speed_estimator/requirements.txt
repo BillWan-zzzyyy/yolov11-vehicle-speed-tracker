@@ -1,4 +1,0 @@
-opencv-python
-gdown
-ultralytics
-supervision
