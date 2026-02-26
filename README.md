@@ -1,8 +1,10 @@
-# yolov11-vehicle-speed-tracker
+# yolov11-vehicle-speed-state-tracker for USDOT ARPA-I Ideas Challenge
 ## Introduction
-YOLOv11 Surveillance Speed Tracker is a computer vision pipeline that performs real-time vehicle detection, tracking, and speed estimation from video footage. Leveraging YOLOv11 for object detection and ByteTrack for multi-object tracking, it maps vehicle positions from camera space to world space using perspective transformation, enabling accurate speed calculation in km/h.
+In this repository, a yolov11-based vehicle speed and state tracker is established. This is a computer vision pipeline that performs real-time vehicle detection, tracking, and speed estimation from video footage. Leveraging YOLOv11 for object detection and ByteTrack for multi-object tracking, it maps vehicle positions from camera space to world space using perspective transformation, enabling accurate speed calculation in mph, the speeding detection, and abnormal state detection.
 
 Designed for use in road surveillance, intelligent traffic systems, and smart city infrastructure, this system integrates with the Supervision library for real-time annotation and visualization.
+
+This repository is built on the foundation of [**YOLOv11-vehicle-speed-tracker.**](https://github.com/krishnapriya-nynaru/yolov11-vehicle-speed-tracker)
 
 
 ## Table of Contents
@@ -106,6 +108,7 @@ Contributions are welcome! To contribute to this project:
 If you have any suggestions for improvements or features, feel free to open an issue!
 
 ## Acknowledgments
+- [**YOLOv11-vehicle-speed-tracker.**](https://github.com/krishnapriya-nynaru/yolov11-vehicle-speed-tracker)
 - [**YOLOv11 for object detection.**](https://github.com/ultralytics/yolov11)
 - [**ByteTracker for Multi object tracking.**](https://github.com/FoundationVision/ByteTrack)
 - [**OpenCV for computer vision functionalities.**](https://opencv.org/)
