@@ -28,23 +28,41 @@ This repository is built on the foundation of [**YOLOv11-vehicle-speed-tracker.*
 ## Project Structure
 ```bash
 vehicle_speed_estimation/
-│── config/                    # Configuration files (video URL, model path, class filters, constants)
-│   ├── settings.py            
-│── modules/                   # Core logic modules
-│   ├── mapping.py             # Stores evaluation results  
-│   ├── speedometer.py         # Cam2WorldMapper for perspective 
-│   ├── annotators.py          # Bounding box, trace, and label annotation 
-│── zone/                      # Polygon zone definitions and trigger logic
-│   ├── zone_trigger.py                 
-│── models/                    # Model checkpoints 
-│   ├── yolo11n.pt             
-│── utils/                     # Utility functions and constants  
-│   ├── downloader.py          # Google Drive video downloader      
-│   ├── constants.py           # Polygon coordinates and camera calibration points
-│── main.py                    # Entry point: runs detection, tracking, and  
-│── requirements.txt           # Package dependencies  
- 
+├── annotate.py                  # Annotation entry script
+├── annotated_lane_lines.txt     # Lane line coordinates
+├── annotated_points.txt         # Image point coordinates
+├── ANNOTATION_GUIDE.md          # Annotation instructions
+├── assets                       # Media input assets
+├── calibrate.py                 # Calibration entry script
+├── calibrated_world_points.txt  # World calibration points
+├── config                       # Configuration package
+│   ├── __init__.py              
+│   └── settings.py              # Runtime settings
+├── main.py                      # main code
+├── models                       # Model checkpoints
+│   ├── yolo11n.pt               
+│   └── yolo11s.pt               
+├── modules                      # Core logic modules
+│   ├── __init__.py              
+│   ├── annotators.py            # Drawing and labels
+│   ├── data_recorder.py         # Detection data logging
+│   ├── lane_assigner.py         # Lane assignment logic
+│   ├── mapping.py               # Perspective mapping logic
+│   ├── speedometer.py           # Speed estimation logic
+│   └── video_recorder.py        # Output video writer
+├── results                      # Run outputs
+├── utils                        
+│   ├── __init__.py              
+│   ├── annotate_points.py       # Point annotation helpers
+│   ├── bytetracker.yaml         # ByteTrack config
+│   ├── calibrate_world_points.py # World-point calibration helper
+│   ├── constants.py             # Shared constants
+│   └── downloader.py            # Input video downloader
+└── zone                         # Zone logic package
+    ├── __init__.py              
+    └── zone_trigger.py          
 ```
+
 ## Installation
 1. Clone this repository:
    ```bash
