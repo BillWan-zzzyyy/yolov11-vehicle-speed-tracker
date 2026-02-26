@@ -19,9 +19,10 @@ This repository is built on the foundation of [**YOLOv11-vehicle-speed-tracker.*
 ## Features
 - 📦 Object detection with YOLOv11
 - 🧭 Perspective transformation for accurate distance mapping
-- 🏎️ Speed estimation in real-world units (km/h)
+- 🏎️ Speed estimation in real-world units (mph)
 - 🔁 Multi-object tracking using ByteTrack
 - 🖥️ Real-time annotation with bounding boxes, traces, and speed labels
+- 🛞 Speeding and wrong lane detection
 - 🛠️ Modular and production-ready Python package structure
 
 ## Project Structure
