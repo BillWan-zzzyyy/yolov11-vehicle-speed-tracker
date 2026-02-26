@@ -113,11 +113,7 @@ python calibrate.py
 
 ## Results
 
-
-
 https://github.com/user-attachments/assets/e6aad29b-c3f7-411c-909a-fac3fc3e95d0
-
-
 
 
 ## Contributing 
