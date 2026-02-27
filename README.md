@@ -4,7 +4,7 @@ In this repository, a yolov11-based vehicle speed and state tracker is establish
 
 Designed for use in road surveillance, intelligent traffic systems, and smart city infrastructure, this system integrates with the Supervision library for real-time annotation and visualization.
 
-This repository is built on the foundation of [**YOLOv11-vehicle-speed-tracker.**](https://github.com/krishnapriya-nynaru/yolov11-vehicle-speed-tracker)
+This repository is built on [**YOLOv11-vehicle-speed-tracker.**](https://github.com/krishnapriya-nynaru/yolov11-vehicle-speed-tracker). Thanks krishnapriya for the contribution!
 
 
 ## Table of Contents
