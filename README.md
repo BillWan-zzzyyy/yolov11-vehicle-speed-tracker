@@ -76,7 +76,12 @@ vehicle_speed_estimation/
     cd vehicle_speed_estimator
 
 ## Usage
-Run the script with Python
+1. Download video:
+[Video Link](https://drive.google.com/file/d/1e5MdtXFF8o1OXUuu2BMCAu80WVx8CPQN/view?usp=sharing)
+
+2. Put downloaded video to ```assets```
+
+3. Run the script with Python
 ```bash
 python main.py
 ```
@@ -132,5 +137,3 @@ If you have any suggestions for improvements or features, feel free to open an i
 - [**ByteTracker for Multi object tracking.**](https://github.com/FoundationVision/ByteTrack)
 - [**OpenCV for computer vision functionalities.**](https://opencv.org/)
 - [**Supervision by Roboflow, for seamless computer vision annotation tools (bounding boxes, traces, and on-frame labels).**](https://github.com/roboflow/supervision)
-
-### 🎉 Happy coding!
