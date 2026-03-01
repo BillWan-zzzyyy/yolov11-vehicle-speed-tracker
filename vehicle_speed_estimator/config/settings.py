@@ -3,7 +3,7 @@
 # VIDEO_PATH = "assets\test3.mp4"
 
 #mac
-VIDEO_PATH = "assets/crash2.mp4"
+VIDEO_PATH = "assets/VeronaRd.mp4"
 # VeronaRd
 
 #no downloaded video
@@ -14,8 +14,13 @@ VIDEO_DOWNLOAD_PATH = "assets"  # 下载视频保存的文件夹
 # 模型配置
 MODEL_PATH = "models/yolo11m.pt"
 MPS_TO_MPH = 2.2369362921
+# 距离单位转换：米 -> 英里
+METERS_TO_MILES = 1 / 1609.344
 CLASSES_TO_TRACK = [0, 1, 2, 5, 7]  #person, bicycle， car, bus, truck
-CONFIDENCE_THRESHOLD = 0.3
+CONFIDENCE_THRESHOLD = 0.4
+CLASS_SMOOTHING_ENABLED = True
+CLASS_SMOOTHING_WINDOW = 8
+CLASS_SMOOTHING_MIN_OBS = 5
 
 # 实时录制配置
 RECORD_OUTPUT_VIDEO = False
@@ -26,7 +31,7 @@ RECORD_OUTPUT_QUEUE_SIZE = 100
 RECORD_OUTPUT_DROP_FRAMES = True
 
 # 车辆数据保存开关（CSV/JSON/摘要）
-SAVE_VEHICLE_DATA = False
+SAVE_VEHICLE_DATA = True
 
 # 监测区域可视化开关（边界线 + 文本标签 + A/B/C/D）
 SHOW_MONITORING_AREA = True
@@ -38,8 +43,8 @@ MONITORING_AREA_LABEL_THICKNESS = 4
 # 文本位置直观调参（推荐每次改 10~20 像素）
 # OFFSET_X > 0 向右，OFFSET_X < 0 向左；常用: +20 / +40 / +60
 # OFFSET_Y > 0 向下，OFFSET_Y < 0 向上
-MONITORING_AREA_LABEL_OFFSET_X = 400
-MONITORING_AREA_LABEL_OFFSET_Y = 24  # 文本基线位于 ROI 下方的偏移
+MONITORING_AREA_LABEL_OFFSET_X = 350
+MONITORING_AREA_LABEL_OFFSET_Y = 5  # 文本基线位于 ROI 下方的偏移
 MONITORING_AREA_LABEL_MARGIN_X = 8
 MONITORING_AREA_LABEL_MARGIN_Y = 8
 
@@ -51,7 +56,7 @@ LANE_ASSIGNMENT_MODE = "line_segments"
 
 # 车道边界线（按从左到右顺序），每条边界线由两个点定义: [(x1, y1), (x2, y2)]
 # 使用 line_segments 模式时优先使用该配置；为空时自动回退到 LANE_BOUNDARIES_X。
-LANE_BOUNDARY_LINES = [[(583, 261), (1110, 1220)], [(646, 259), (1374, 1189)], [(716, 258), (1626, 1155)], [(772, 259), (1823, 1132)], [(820, 245), (2061, 1108)], [(1072, 247), (2367, 825)], [(1133, 244), (2460, 785)], [(1170, 233), (2546, 739)]]
+LANE_BOUNDARY_LINES = [[(584, 258), (1112, 1222)], [(647, 254), (1374, 1186)], [(710, 254), (1618, 1147)], [(762, 246), (1823, 1132)], [(815, 243), (2064, 1099)], [(936, 219), (2551, 976)], [(1009, 218), (2551, 875)], [(1056, 214), (2551, 797)], [(1101, 206), (2551, 728)]]
 SHOW_LANE_BOUNDARY_LINES = False
 LANE_LINE_COLOR = (144, 238, 144)  # BGR 浅绿色
 LANE_LINE_THICKNESS = 2
@@ -65,7 +70,7 @@ LANE_LINE_THICKNESS = 2
 EMERGENCY_LANE_ENABLED = True
 EMERGENCY_LANE_RULES = [
     {"type": "left_of", "boundary": 1},
-    {"type": "right_of", "boundary": 8}
+    {"type": "right_of", "boundary": 9}
 ]
 # legacy 回退字段：例如 (1, 2) 表示第1和第2条边界线之间的车道是应急车道。
 EMERGENCY_LANE_BETWEEN_BOUNDARIES = (1, 2)
@@ -76,7 +81,7 @@ EMERGENCY_BBOX_COLOR = (0, 0, 255)  # BGR 红色
 EMERGENCY_BBOX_THICKNESS = 2
 
 # 超速检测与可视化配置
-SPEED_LIMIT_MPH = 30
+SPEED_LIMIT_MPH = 55
 MAX_VALID_SPEED_MPH = 90
 HIGHLIGHT_SPEEDING_VEHICLES = True
 SPEEDING_BBOX_COLOR = (0, 0, 255)  # BGR 红色

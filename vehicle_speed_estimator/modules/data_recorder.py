@@ -7,6 +7,7 @@ import os
 from datetime import datetime
 from collections import defaultdict
 import numpy as np
+from config.settings import METERS_TO_MILES
 
 
 class VehicleDataRecorder:
@@ -46,9 +47,9 @@ class VehicleDataRecorder:
         
         参数:
             vehicle_id: 车辆ID
-            speed: 当前速度 (mile/h)
+            speed: 当前速度 (mph)
             image_trace: 图像坐标轨迹 [(x1, y1), (x2, y2), ...]
-            world_trace: 世界坐标轨迹 [(x1, y1), (x2, y2), ...] (可选)
+            world_trace: 世界坐标轨迹（米）[(x1, y1), (x2, y2), ...] (可选)
             class_name: 车辆类别名称，如 car、truck、bus
             lane_id: 车辆所在车道编号（从1开始，可选）
             is_emergency_lane: 是否处于应急车道
@@ -188,7 +189,7 @@ class VehicleDataRecorder:
             writer.writerow([
                 "Vehicle_ID", "Total_Frames", "First_Frame", "Last_Frame",
                 "Max_Speed_mph", "Min_Speed_mph", "Avg_Speed_mph",
-                "Total_Distance_m", "Duration_seconds"
+                "Total_Distance_mile", "Duration_seconds"
             ])
             
             for vehicle_id, records in self.vehicle_data.items():
@@ -200,14 +201,16 @@ class VehicleDataRecorder:
                                  if r["world_position"]["x"] is not None]
                 
                 # 计算总距离
-                total_distance = 0.0
+                total_distance_m = 0.0
                 if len(world_positions) > 1:
                     for i in range(1, len(world_positions)):
                         x1, y1 = world_positions[i-1]["x"], world_positions[i-1]["y"]
                         x2, y2 = world_positions[i]["x"], world_positions[i]["y"]
                         if x1 is not None and y1 is not None and x2 is not None and y2 is not None:
                             distance = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
-                            total_distance += distance
+                            total_distance_m += distance
+                # 摘要导出里程统一使用英里（mile）
+                total_distance_mile = total_distance_m * METERS_TO_MILES
                 
                 # 计算持续时间（基于帧数）
                 duration = (records[-1]["frame"] - records[0]["frame"]) / 30.0  # 假设30fps
@@ -220,7 +223,7 @@ class VehicleDataRecorder:
                     max(speeds) if speeds else 0,
                     min(speeds) if speeds else 0,
                     sum(speeds) / len(speeds) if speeds else 0,
-                    total_distance,
+                    total_distance_mile,
                     duration
                 ])
         

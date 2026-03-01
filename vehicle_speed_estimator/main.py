@@ -3,6 +3,7 @@ from ultralytics import YOLO
 import supervision as sv
 import numpy as np
 import time  # 添加这个导入
+from collections import Counter, deque
 
 from utils.downloader import download_video_if_needed
 from utils.constants import IMAGE_POINTS, WORLD_POINTS
@@ -240,6 +241,9 @@ def main():
     status_legend_border_thickness = int(globals().get("STATUS_LEGEND_BORDER_THICKNESS", 3))
     status_legend_padding_x = int(globals().get("STATUS_LEGEND_PADDING_X", 10))
     status_legend_padding_y = int(globals().get("STATUS_LEGEND_PADDING_Y", 8))
+    class_smoothing_enabled = bool(globals().get("CLASS_SMOOTHING_ENABLED", True))
+    class_smoothing_window = max(1, int(globals().get("CLASS_SMOOTHING_WINDOW", 10)))
+    class_smoothing_min_obs = max(1, int(globals().get("CLASS_SMOOTHING_MIN_OBS", 3)))
     lane_assigner = LaneAssigner(
         lane_boundaries_x=lane_boundaries_x,
         lane_boundary_lines=lane_boundary_lines,
@@ -289,6 +293,9 @@ def main():
     processing_time_min_ms = float("inf")
     processing_time_max_ms = 0.0
     processed_frame_count = 0
+    frame_index = 0
+    class_history_by_trace_id = {}
+    last_seen_frame_by_trace_id = {}
 
     while True:
         start_time = time.time()  # 记录开始时间
@@ -296,6 +303,7 @@ def main():
         ret, frame = cap.read()
         if not ret:
             break
+        frame_index += 1
 
         result = model.track(
             frame,
@@ -324,14 +332,50 @@ def main():
             class_ids = detections.class_id
             model_names = getattr(model, "names", {})
             for idx, trace_id in enumerate(trace_ids):
-                class_name = "unknown"
+                raw_class_name = "unknown"
                 if class_ids is not None and idx < len(class_ids) and class_ids[idx] is not None:
                     class_id = int(class_ids[idx])
                     if isinstance(model_names, dict):
-                        class_name = model_names.get(class_id, "unknown")
+                        raw_class_name = model_names.get(class_id, "unknown")
                     elif isinstance(model_names, (list, tuple)) and 0 <= class_id < len(model_names):
-                        class_name = model_names[class_id]
-                class_name_by_trace_id[trace_id] = str(class_name) if class_name else "unknown"
+                        raw_class_name = model_names[class_id]
+                raw_class_name = str(raw_class_name) if raw_class_name else "unknown"
+
+                if class_smoothing_enabled:
+                    history = class_history_by_trace_id.get(trace_id)
+                    if history is None:
+                        history = deque(maxlen=class_smoothing_window)
+                        class_history_by_trace_id[trace_id] = history
+                    history.append(raw_class_name)
+                    last_seen_frame_by_trace_id[trace_id] = frame_index
+
+                    if len(history) >= class_smoothing_min_obs:
+                        vote_counter = Counter(history)
+                        top_vote_count = max(vote_counter.values())
+                        top_labels = {label for label, count in vote_counter.items() if count == top_vote_count}
+                        if len(top_labels) == 1:
+                            stable_class_name = next(iter(top_labels))
+                        else:
+                            stable_class_name = raw_class_name
+                            for label in reversed(history):
+                                if label in top_labels:
+                                    stable_class_name = label
+                                    break
+                    else:
+                        stable_class_name = raw_class_name
+                    class_name_by_trace_id[trace_id] = stable_class_name
+                else:
+                    class_name_by_trace_id[trace_id] = raw_class_name
+
+        if class_smoothing_enabled and class_history_by_trace_id:
+            stale_track_gap = max(30, class_smoothing_window * 3)
+            stale_trace_ids = [
+                tid for tid, seen_frame in last_seen_frame_by_trace_id.items()
+                if frame_index - seen_frame > stale_track_gap
+            ]
+            for stale_trace_id in stale_trace_ids:
+                class_history_by_trace_id.pop(stale_trace_id, None)
+                last_seen_frame_by_trace_id.pop(stale_trace_id, None)
 
         labels = []
         abnormal_trace_ids = set()
@@ -399,6 +443,22 @@ def main():
         # frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         # frame = cv.cvtColor(frame_gray, cv.COLOR_GRAY2BGR)
 
+        # 先绘制监测区域，再绘制车辆框/轨迹/标签，避免 ROI 覆盖车辆标签
+        if SHOW_MONITORING_AREA:
+            frame = draw_monitoring_area_overlay(
+                frame=frame,
+                image_points=IMAGE_POINTS,
+                line_color=monitoring_area_line_color,
+                line_thickness=monitoring_area_line_thickness,
+                label_text=monitoring_area_label_text,
+                label_font_scale=monitoring_area_label_font_scale,
+                label_thickness=monitoring_area_label_thickness,
+                label_offset_x=monitoring_area_label_offset_x,
+                label_offset_y=monitoring_area_label_offset_y,
+                label_margin_x=monitoring_area_label_margin_x,
+                label_margin_y=monitoring_area_label_margin_y
+            )
+
         frame = annotators["bbox"].annotate(frame, detections)
         if has_valid_tracker_ids and len(detections) > 0:
             for idx, trace_id in enumerate(trace_ids):
@@ -443,22 +503,6 @@ def main():
                 lane_lines=lane_boundary_lines,
                 line_color=lane_line_color,
                 line_thickness=lane_line_thickness
-            )
-
-        # 可视化监测区域（边界线 + 下方标题 + A/B/C/D 标注）
-        if SHOW_MONITORING_AREA:
-            frame = draw_monitoring_area_overlay(
-                frame=frame,
-                image_points=IMAGE_POINTS,
-                line_color=monitoring_area_line_color,
-                line_thickness=monitoring_area_line_thickness,
-                label_text=monitoring_area_label_text,
-                label_font_scale=monitoring_area_label_font_scale,
-                label_thickness=monitoring_area_label_thickness,
-                label_offset_x=monitoring_area_label_offset_x,
-                label_offset_y=monitoring_area_label_offset_y,
-                label_margin_x=monitoring_area_label_margin_x,
-                label_margin_y=monitoring_area_label_margin_y
             )
 
         if show_status_legend:
