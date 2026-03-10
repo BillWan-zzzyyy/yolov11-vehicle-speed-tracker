@@ -15,6 +15,7 @@ from modules.annotators import get_annotators
 from modules.data_recorder import VehicleDataRecorder
 from modules.lane_assigner import LaneAssigner
 from modules.video_recorder import AsyncVideoRecorder
+from modules.fhwa_classifier import coco_to_fhwa, format_fhwa_label
 from zone.zone_trigger import create_zone
 
 
@@ -400,6 +401,8 @@ def main():
             is_speeding = speed > speed_limit_mph
             is_outlier = speed > max_valid_speed_mph
             class_name = class_name_by_trace_id.get(trace_id, "unknown")
+            fhwa_info = coco_to_fhwa(class_name)
+            fhwa_label = format_fhwa_label(fhwa_info)
             lane_id = None
             is_emergency_lane = False
             if lane_assigner is not None and trace is not None and len(trace) > 0:
@@ -419,13 +422,13 @@ def main():
 
             if is_abnormal:
                 labels.append(
-                    f"Type: {class_name}\n"
+                    f"{fhwa_label}\n"
                     f"Speed: {speed:.1f} mph\n"
                     f"Status: {abnormal_status}"
                 )
             else:
                 labels.append(
-                    f"Type: {class_name}\n"
+                    f"{fhwa_label}\n"
                     f"Speed: {speed:.1f} mph"
                 )
             
@@ -444,6 +447,8 @@ def main():
                         image_trace=trace,
                         world_trace=world_trace,
                         class_name=class_name,
+                        fhwa_class=fhwa_info.get("fhwa_class"),
+                        fhwa_name=fhwa_info.get("fhwa_name", "Unknown"),
                         lane_id=lane_id,
                         is_emergency_lane=is_emergency_lane,
                         is_speeding=is_speeding

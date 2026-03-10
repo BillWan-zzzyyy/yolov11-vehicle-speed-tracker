@@ -16,8 +16,11 @@ MODEL_PATH = "models/yolo11m.pt"
 MPS_TO_MPH = 2.2369362921
 # 距离单位转换：米 -> 英里
 METERS_TO_MILES = 1 / 1609.344
-CLASSES_TO_TRACK = [0, 1, 2, 5, 7]  #person, bicycle， car, bus, truck
+CLASSES_TO_TRACK = [2, 3, 5, 7]  # car, motorcycle, bus, truck（仅 FHWA 机动车类别）
 CONFIDENCE_THRESHOLD = 0.4
+
+# FHWA 分类映射开关
+FHWA_CLASSIFICATION_ENABLED = True
 CLASS_SMOOTHING_ENABLED = True
 CLASS_SMOOTHING_WINDOW = 8
 CLASS_SMOOTHING_MIN_OBS = 5

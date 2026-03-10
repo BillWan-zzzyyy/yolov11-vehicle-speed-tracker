@@ -38,19 +38,23 @@ class VehicleDataRecorder:
         image_trace,
         world_trace=None,
         class_name="unknown",
+        fhwa_class=None,
+        fhwa_name="Unknown",
         lane_id=None,
         is_emergency_lane=False,
         is_speeding=False
     ):
         """
         记录车辆数据
-        
+
         参数:
             vehicle_id: 车辆ID
             speed: 当前速度 (mph)
             image_trace: 图像坐标轨迹 [(x1, y1), (x2, y2), ...]
             world_trace: 世界坐标轨迹（米）[(x1, y1), (x2, y2), ...] (可选)
-            class_name: 车辆类别名称，如 car、truck、bus
+            class_name: COCO 检测类别名称，如 car、truck、bus
+            fhwa_class: FHWA 分类编号 (1-13)，None 表示未知
+            fhwa_name: FHWA 分类名称，如 "Passenger Cars"
             lane_id: 车辆所在车道编号（从1开始，可选）
             is_emergency_lane: 是否处于应急车道
             is_speeding: 是否超速
@@ -76,6 +80,8 @@ class VehicleDataRecorder:
             "timestamp": timestamp,
             "speed_mph": float(speed),
             "class_name": str(class_name) if class_name else "unknown",
+            "fhwa_class": int(fhwa_class) if fhwa_class is not None else None,
+            "fhwa_name": str(fhwa_name) if fhwa_name else "Unknown",
             "lane_id": int(lane_id) if lane_id is not None else None,
             "is_emergency_lane": bool(is_emergency_lane),
             "is_speeding": bool(is_speeding),
@@ -112,7 +118,9 @@ class VehicleDataRecorder:
             writer = csv.writer(f)
             # 写入表头
             writer.writerow([
-                "Vehicle_ID", "Class_Name", "Lane_ID", "Is_Emergency_Lane", "Is_Speeding", "Frame", "Timestamp", "Speed_mph",
+                "Vehicle_ID", "Class_Name", "FHWA_Class", "FHWA_Name",
+                "Lane_ID", "Is_Emergency_Lane", "Is_Speeding",
+                "Frame", "Timestamp", "Speed_mph",
                 "Image_X", "Image_Y", "World_X", "World_Y",
                 "Image_Trace_Length", "World_Trace_Length"
             ])
@@ -123,6 +131,8 @@ class VehicleDataRecorder:
                     writer.writerow([
                         vehicle_id,
                         record.get("class_name", "unknown"),
+                        record.get("fhwa_class"),
+                        record.get("fhwa_name", "Unknown"),
                         record.get("lane_id"),
                         record.get("is_emergency_lane", False),
                         record.get("is_speeding", False),
@@ -187,7 +197,8 @@ class VehicleDataRecorder:
         with open(filename, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             writer.writerow([
-                "Vehicle_ID", "Total_Frames", "First_Frame", "Last_Frame",
+                "Vehicle_ID", "Class_Name", "FHWA_Class", "FHWA_Name",
+                "Total_Frames", "First_Frame", "Last_Frame",
                 "Max_Speed_mph", "Min_Speed_mph", "Avg_Speed_mph",
                 "Total_Distance_mile", "Duration_seconds"
             ])
@@ -195,11 +206,16 @@ class VehicleDataRecorder:
             for vehicle_id, records in self.vehicle_data.items():
                 if not records:
                     continue
-                
+
+                last_record = records[-1]
+                class_name = last_record.get("class_name", "unknown")
+                fhwa_class = last_record.get("fhwa_class")
+                fhwa_name = last_record.get("fhwa_name", "Unknown")
+
                 speeds = [r["speed_mph"] for r in records if r["speed_mph"] > 0]
-                world_positions = [r["world_position"] for r in records 
+                world_positions = [r["world_position"] for r in records
                                  if r["world_position"]["x"] is not None]
-                
+
                 # 计算总距离
                 total_distance_m = 0.0
                 if len(world_positions) > 1:
@@ -211,12 +227,15 @@ class VehicleDataRecorder:
                             total_distance_m += distance
                 # 摘要导出里程统一使用英里（mile）
                 total_distance_mile = total_distance_m * METERS_TO_MILES
-                
+
                 # 计算持续时间（基于帧数）
                 duration = (records[-1]["frame"] - records[0]["frame"]) / 30.0  # 假设30fps
-                
+
                 writer.writerow([
                     vehicle_id,
+                    class_name,
+                    fhwa_class,
+                    fhwa_name,
                     len(records),
                     records[0]["frame"],
                     records[-1]["frame"],
