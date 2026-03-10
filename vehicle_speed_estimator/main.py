@@ -110,6 +110,7 @@ def draw_status_legend_overlay(
     box_size=14,
     item_gap=10,
     text_gap=8,
+    font=cv.FONT_HERSHEY_DUPLEX,
     font_scale=0.6,
     text_thickness=2,
     text_color=(255, 255, 255),
@@ -121,7 +122,6 @@ def draw_status_legend_overlay(
 ):
     """Draw status legend at bottom-left corner."""
     frame_height = frame.shape[0]
-    baseline_padding = 6
     normal_baseline_y = frame_height - int(margin_y) - int(box_size) - int(item_gap)
     abnormal_baseline_y = frame_height - int(margin_y)
     items = [
@@ -137,13 +137,16 @@ def draw_status_legend_overlay(
     for _, text, baseline_y in items:
         text_size, text_baseline = cv.getTextSize(
             text,
-            cv.FONT_HERSHEY_SIMPLEX,
+            font,
             float(font_scale),
             max(1, int(text_thickness))
         )
         text_width, text_height = text_size
-        item_top = min(int(baseline_y - box_size), int(baseline_y - baseline_padding - text_height))
-        item_bottom = max(int(baseline_y), int(baseline_y - baseline_padding + text_baseline))
+        box_center_y = baseline_y - box_size / 2
+        text_visual_top = int(box_center_y - text_height / 2)
+        text_visual_bottom = int(box_center_y + text_height / 2 + text_baseline)
+        item_top = min(int(baseline_y - box_size), text_visual_top)
+        item_bottom = max(int(baseline_y), text_visual_bottom)
         item_right = int(margin_x + box_size + text_gap + text_width)
 
         legend_top = min(legend_top, item_top)
@@ -169,12 +172,20 @@ def draw_status_legend_overlay(
         box_top_left = (int(margin_x), int(baseline_y - box_size))
         box_bottom_right = (int(margin_x + box_size), int(baseline_y))
         cv.rectangle(frame, box_top_left, box_bottom_right, color, -1)
-        text_origin = (int(margin_x + box_size + text_gap), int(baseline_y - baseline_padding))
+
+        text_size, _ = cv.getTextSize(
+            text, font,
+            float(font_scale), max(1, int(text_thickness))
+        )
+        text_height = text_size[1]
+        box_center_y = baseline_y - box_size / 2
+        text_origin = (int(margin_x + box_size + text_gap), int(box_center_y + text_height / 2))
+
         cv.putText(
             frame,
             text,
             text_origin,
-            cv.FONT_HERSHEY_SIMPLEX,
+            font,
             float(font_scale),
             text_color,
             max(1, int(text_thickness))
@@ -231,6 +242,8 @@ def main():
     status_legend_box_size = int(globals().get("STATUS_LEGEND_BOX_SIZE", 14))
     status_legend_item_gap = int(globals().get("STATUS_LEGEND_ITEM_GAP", 10))
     status_legend_text_gap = int(globals().get("STATUS_LEGEND_TEXT_GAP", 8))
+    _font_name = str(globals().get("STATUS_LEGEND_FONT", "FONT_HERSHEY_DUPLEX"))
+    status_legend_font = getattr(cv, _font_name, cv.FONT_HERSHEY_DUPLEX)
     status_legend_font_scale = float(globals().get("STATUS_LEGEND_FONT_SCALE", 0.6))
     status_legend_thickness = int(globals().get("STATUS_LEGEND_THICKNESS", 2))
     status_legend_text_color = tuple(globals().get("STATUS_LEGEND_TEXT_COLOR", (0, 0, 0)))
@@ -517,6 +530,7 @@ def main():
                 box_size=status_legend_box_size,
                 item_gap=status_legend_item_gap,
                 text_gap=status_legend_text_gap,
+                font=status_legend_font,
                 font_scale=status_legend_font_scale,
                 text_thickness=status_legend_thickness,
                 text_color=status_legend_text_color,
